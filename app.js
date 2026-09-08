@@ -17,9 +17,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
 
-/* =====================================================
+/* =========================================
    FIREBASE CONFIG
-   ===================================================== */
+   ========================================= */
 
 const firebaseConfig = {
   apiKey: "AIzaSyBfESDPYSGQKP6gMJ89f1dVQKEjO7MFZOA",
@@ -30,9 +30,10 @@ const firebaseConfig = {
   appId: "1:1099352092551:web:e5fb057ea955b16fe9ed22"
 };
 
-/* =====================================================
-   FIREBASE
-   ===================================================== */
+
+/* =========================================
+   INITIALIZE FIREBASE
+   ========================================= */
 
 const app = initializeApp(firebaseConfig);
 
@@ -41,24 +42,22 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-/* =====================================================
-   USERNAME → INTERNAL FIREBASE ACCOUNT
-   ===================================================== */
+/* =========================================
+   OUR TWO ACCOUNTS
+   ========================================= */
 
 const accounts = {
 
-  aniket:
-    "aniket@ourspace.local",
+  aniket: "aniket@ourspace.local",
 
-  pari:
-    "pari@ourspace.local"
+  pari: "pari@ourspace.local"
 
 };
 
 
-/* =====================================================
+/* =========================================
    ELEMENTS
-   ===================================================== */
+   ========================================= */
 
 const loginScreen =
   document.getElementById("loginScreen");
@@ -96,13 +95,10 @@ const logoutBtn =
 const statusText =
   document.getElementById("status");
 
-const partnerName =
-  document.getElementById("partnerName");
 
-
-/* =====================================================
+/* =========================================
    LOGIN
-   ===================================================== */
+   ========================================= */
 
 loginForm.addEventListener("submit", async (event) => {
 
@@ -111,17 +107,10 @@ loginForm.addEventListener("submit", async (event) => {
   loginError.textContent = "";
 
   const username =
-    usernameInput.value
-      .trim()
-      .toLowerCase();
+    usernameInput.value.trim().toLowerCase();
 
   const password =
     passwordInput.value;
-
-
-  /*
-     Only these two usernames are accepted.
-  */
 
   if (!accounts[username]) {
 
@@ -132,7 +121,6 @@ loginForm.addEventListener("submit", async (event) => {
 
   }
 
-
   try {
 
     await signInWithEmailAndPassword(
@@ -141,13 +129,12 @@ loginForm.addEventListener("submit", async (event) => {
       password
     );
 
-  }
-
-  catch (error) {
+  } catch (error) {
 
     console.error(
-      "Firebase Login Error:",
-      error
+      "LOGIN ERROR:",
+      error.code,
+      error.message
     );
 
     loginError.textContent =
@@ -158,9 +145,9 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 
-/* =====================================================
+/* =========================================
    AUTH STATE
-   ===================================================== */
+   ========================================= */
 
 onAuthStateChanged(auth, (user) => {
 
@@ -170,59 +157,26 @@ onAuthStateChanged(auth, (user) => {
 
     chatScreen.classList.remove("hidden");
 
-    statusText.textContent =
-      "Online";
-
-    const username =
-      getUsernameFromEmail(user.email);
-
-    partnerName.textContent =
-      username === "aniket"
-        ? "Our Space"
-        : "Our Space";
+    statusText.textContent = "Online";
 
     startChat();
 
-  }
-
-  else {
+  } else {
 
     chatScreen.classList.add("hidden");
 
     loginScreen.classList.remove("hidden");
 
-    statusText.textContent =
-      "Offline";
+    statusText.textContent = "Offline";
 
   }
 
 });
 
 
-/* =====================================================
-   GET USERNAME
-   ===================================================== */
-
-function getUsernameFromEmail(email) {
-
-  if (!email) return "";
-
-  if (email === accounts.aniket) {
-    return "aniket";
-  }
-
-  if (email === accounts.chulbul) {
-    return "chulbul";
-  }
-
-  return "";
-
-}
-
-
-/* =====================================================
+/* =========================================
    SEND MESSAGE
-   ===================================================== */
+   ========================================= */
 
 messageForm.addEventListener("submit", async (event) => {
 
@@ -231,25 +185,36 @@ messageForm.addEventListener("submit", async (event) => {
   const user = auth.currentUser;
 
   if (!user) {
+
     alert("You are not logged in.");
+
     return;
+
   }
 
-  const text = messageInput.value.trim();
+  const text =
+    messageInput.value.trim();
 
-  if (!text) return;
+  if (!text) {
+
+    return;
+
+  }
 
   try {
 
-    await push(ref(db, "messages"), {
+    await push(
+      ref(db, "messages"),
+      {
 
-      text: text,
+        text: text,
 
-      uid: user.uid,
+        uid: user.uid,
 
-      timestamp: Date.now()
+        timestamp: Date.now()
 
-    });
+      }
+    );
 
     messageInput.value = "";
 
@@ -257,10 +222,14 @@ messageForm.addEventListener("submit", async (event) => {
 
   } catch (error) {
 
-    console.error("MESSAGE ERROR:", error);
+    console.error(
+      "MESSAGE ERROR:",
+      error.code,
+      error.message
+    );
 
     alert(
-      "Message send nahi hua:\n" +
+      "Message send nahi hua.\n\n" +
       error.code +
       "\n" +
       error.message
@@ -271,37 +240,14 @@ messageForm.addEventListener("submit", async (event) => {
 });
 
 
-    messageInput.value = "";
-
-    messageInput.focus();
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "Message Error:",
-      error
-    );
-
-    alert(
-      "Message send nahi hua."
-    );
-
-  }
-
-});
-
-
-/* =====================================================
-   REAL-TIME CHAT
-   ===================================================== */
+/* =========================================
+   LOAD REAL-TIME MESSAGES
+   ========================================= */
 
 function startChat() {
 
   const messagesRef =
     ref(db, "messages");
-
 
   onValue(
     messagesRef,
@@ -309,21 +255,16 @@ function startChat() {
 
       messages.innerHTML = "";
 
-
       const data =
         snapshot.val();
 
-
       if (!data) {
 
-        messages.appendChild(
-          emptyState
-        );
+        messages.appendChild(emptyState);
 
         return;
 
       }
-
 
       const list =
         Object.entries(data)
@@ -337,72 +278,64 @@ function startChat() {
               (b.timestamp || 0)
           );
 
-
       list.forEach(
         renderMessage
       );
 
-
       messages.scrollTop =
         messages.scrollHeight;
 
+    },
+
+    (error) => {
+
+      console.error(
+        "DATABASE READ ERROR:",
+        error
+      );
+
     }
+
   );
 
 }
 
 
-/* =====================================================
+/* =========================================
    DISPLAY MESSAGE
-   ===================================================== */
+   ========================================= */
 
 function renderMessage(message) {
 
   const user =
     auth.currentUser;
 
-
   const div =
     document.createElement("div");
-
 
   const mine =
     user &&
     message.uid === user.uid;
-
 
   div.className =
     mine
       ? "message mine"
       : "message theirs";
 
-
   const text =
     document.createElement("div");
-
-
-  /*
-     textContent prevents
-     HTML injection.
-  */
 
   text.textContent =
     message.text;
 
-
   const time =
     document.createElement("span");
-
 
   time.className =
     "message-time";
 
-
   time.textContent =
-    formatTime(
-      message.timestamp
-    );
-
+    formatTime(message.timestamp);
 
   div.appendChild(text);
 
@@ -413,16 +346,17 @@ function renderMessage(message) {
 }
 
 
-/* =====================================================
-   TIME
-   ===================================================== */
+/* =========================================
+   FORMAT TIME
+   ========================================= */
 
 function formatTime(timestamp) {
 
   if (!timestamp) {
-    return "...";
-  }
 
+    return "...";
+
+  }
 
   return new Date(timestamp)
     .toLocaleTimeString(
@@ -436,9 +370,9 @@ function formatTime(timestamp) {
 }
 
 
-/* =====================================================
+/* =========================================
    LOGOUT
-   ===================================================== */
+   ========================================= */
 
 logoutBtn.addEventListener(
   "click",
