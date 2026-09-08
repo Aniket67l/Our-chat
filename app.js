@@ -18,9 +18,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
 
-/* =========================================
+/* =====================================================
    FIREBASE CONFIG
-========================================= */
+   ===================================================== */
 
 const firebaseConfig = {
   apiKey: "AIzaSyBfESDPYSGQKP6gMJ89f1dVQKEjO7MFZOA",
@@ -31,10 +31,9 @@ const firebaseConfig = {
   appId: "1:1099352092551:web:e5fb057ea955b16fe9ed22"
 };
 
-
-/* =========================================
-   INITIALIZE
-========================================= */
+/* =====================================================
+   FIREBASE
+   ===================================================== */
 
 const app = initializeApp(firebaseConfig);
 
@@ -43,9 +42,24 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-/* =========================================
+/* =====================================================
+   USERNAME → INTERNAL FIREBASE ACCOUNT
+   ===================================================== */
+
+const accounts = {
+
+  aniket:
+    "aniket@ourspace.local",
+
+  chulbul:
+    "chulbul@ourspace.local"
+
+};
+
+
+/* =====================================================
    ELEMENTS
-========================================= */
+   ===================================================== */
 
 const loginScreen =
   document.getElementById("loginScreen");
@@ -56,8 +70,8 @@ const chatScreen =
 const loginForm =
   document.getElementById("loginForm");
 
-const emailInput =
-  document.getElementById("email");
+const usernameInput =
+  document.getElementById("username");
 
 const passwordInput =
   document.getElementById("password");
@@ -83,10 +97,13 @@ const logoutBtn =
 const statusText =
   document.getElementById("status");
 
+const partnerName =
+  document.getElementById("partnerName");
 
-/* =========================================
+
+/* =====================================================
    LOGIN
-========================================= */
+   ===================================================== */
 
 loginForm.addEventListener("submit", async (event) => {
 
@@ -94,35 +111,57 @@ loginForm.addEventListener("submit", async (event) => {
 
   loginError.textContent = "";
 
-  const email =
-    emailInput.value.trim();
+  const username =
+    usernameInput.value
+      .trim()
+      .toLowerCase();
 
   const password =
     passwordInput.value;
+
+
+  /*
+     Only these two usernames are accepted.
+  */
+
+  if (!accounts[username]) {
+
+    loginError.textContent =
+      "Username not found.";
+
+    return;
+
+  }
+
 
   try {
 
     await signInWithEmailAndPassword(
       auth,
-      email,
+      accounts[username],
       password
     );
 
-  } catch (error) {
+  }
 
-    console.error(error);
+  catch (error) {
+
+    console.error(
+      "Firebase Login Error:",
+      error
+    );
 
     loginError.textContent =
-      "Login failed. Check your email and password.";
+      "Wrong username or password.";
 
   }
 
 });
 
 
-/* =========================================
+/* =====================================================
    AUTH STATE
-========================================= */
+   ===================================================== */
 
 onAuthStateChanged(auth, (user) => {
 
@@ -132,77 +171,119 @@ onAuthStateChanged(auth, (user) => {
 
     chatScreen.classList.remove("hidden");
 
-    statusText.textContent = "Online";
+    statusText.textContent =
+      "Online";
+
+    const username =
+      getUsernameFromEmail(user.email);
+
+    partnerName.textContent =
+      username === "aniket"
+        ? "Our Space"
+        : "Our Space";
 
     startChat();
 
-  } else {
+  }
+
+  else {
 
     chatScreen.classList.add("hidden");
 
     loginScreen.classList.remove("hidden");
 
-    statusText.textContent = "Offline";
+    statusText.textContent =
+      "Offline";
 
   }
 
 });
 
 
-/* =========================================
+/* =====================================================
+   GET USERNAME
+   ===================================================== */
+
+function getUsernameFromEmail(email) {
+
+  if (!email) return "";
+
+  if (email === accounts.aniket) {
+    return "aniket";
+  }
+
+  if (email === accounts.chulbul) {
+    return "chulbul";
+  }
+
+  return "";
+
+}
+
+
+/* =====================================================
    SEND MESSAGE
-========================================= */
+   ===================================================== */
 
 messageForm.addEventListener("submit", async (event) => {
 
   event.preventDefault();
 
-  const user = auth.currentUser;
+  const user =
+    auth.currentUser;
 
   if (!user) return;
+
 
   const text =
     messageInput.value.trim();
 
+
   if (!text) return;
-
-
-  const messagesRef =
-    ref(db, "messages");
 
 
   try {
 
-    await push(messagesRef, {
+    await push(
+      ref(db, "messages"),
+      {
 
-      text: text,
+        text: text,
 
-      uid: user.uid,
+        uid: user.uid,
 
-      email: user.email,
+        timestamp:
+          serverTimestamp()
 
-      timestamp: serverTimestamp()
+      }
+    );
 
-    });
 
     messageInput.value = "";
 
     messageInput.focus();
 
-  } catch (error) {
+  }
 
-    console.error(error);
+  catch (error) {
 
-    alert("Message send nahi hua.");
+    console.error(
+      "Message Error:",
+      error
+    );
+
+    alert(
+      "Message send nahi hua."
+    );
 
   }
 
 });
 
 
-/* =========================================
-   LOAD REALTIME MESSAGES
-========================================= */
+/* =====================================================
+   REAL-TIME CHAT
+   ===================================================== */
 
 function startChat() {
 
@@ -210,54 +291,58 @@ function startChat() {
     ref(db, "messages");
 
 
-  onValue(messagesRef, (snapshot) => {
+  onValue(
+    messagesRef,
+    (snapshot) => {
 
-    messages.innerHTML = "";
-
-    const data =
-      snapshot.val();
-
-
-    if (!data) {
-
-      messages.appendChild(emptyState);
-
-      return;
-
-    }
+      messages.innerHTML = "";
 
 
-    const list =
-      Object.entries(data)
-        .map(([id, message]) => ({
-          id,
-          ...message
-        }))
-        .sort(
-          (a, b) =>
-            (a.timestamp || 0) -
-            (b.timestamp || 0)
+      const data =
+        snapshot.val();
+
+
+      if (!data) {
+
+        messages.appendChild(
+          emptyState
         );
 
+        return;
 
-    list.forEach((message) => {
-
-      renderMessage(message);
-
-    });
+      }
 
 
-    messages.scrollTop =
-      messages.scrollHeight;
+      const list =
+        Object.entries(data)
+          .map(([id, message]) => ({
+            id,
+            ...message
+          }))
+          .sort(
+            (a, b) =>
+              (a.timestamp || 0) -
+              (b.timestamp || 0)
+          );
 
-  });
+
+      list.forEach(
+        renderMessage
+      );
+
+
+      messages.scrollTop =
+        messages.scrollHeight;
+
+    }
+  );
 
 }
 
 
-/* =========================================
-   RENDER MESSAGE
-========================================= */
+/* =====================================================
+   DISPLAY MESSAGE
+   ===================================================== */
 
 function renderMessage(message) {
 
@@ -270,20 +355,23 @@ function renderMessage(message) {
 
 
   const mine =
-    user && message.uid === user.uid;
+    user &&
+    message.uid === user.uid;
 
 
   div.className =
-    `message ${mine ? "mine" : "theirs"}`;
+    mine
+      ? "message mine"
+      : "message theirs";
 
 
   const text =
     document.createElement("div");
 
+
   /*
-     textContent is intentional.
-     It prevents messages from being
-     interpreted as HTML.
+     textContent prevents
+     HTML injection.
   */
 
   text.textContent =
@@ -293,11 +381,15 @@ function renderMessage(message) {
   const time =
     document.createElement("span");
 
+
   time.className =
     "message-time";
 
+
   time.textContent =
-    formatTime(message.timestamp);
+    formatTime(
+      message.timestamp
+    );
 
 
   div.appendChild(text);
@@ -309,29 +401,38 @@ function renderMessage(message) {
 }
 
 
-/* =========================================
+/* =====================================================
    TIME
-========================================= */
+   ===================================================== */
 
 function formatTime(timestamp) {
 
-  if (!timestamp) return "...";
+  if (!timestamp) {
+    return "...";
+  }
+
 
   return new Date(timestamp)
-    .toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    .toLocaleTimeString(
+      [],
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    );
 
 }
 
 
-/* =========================================
+/* =====================================================
    LOGOUT
-========================================= */
+   ===================================================== */
 
-logoutBtn.addEventListener("click", async () => {
+logoutBtn.addEventListener(
+  "click",
+  async () => {
 
-  await signOut(auth);
+    await signOut(auth);
 
-});
+  }
+);
