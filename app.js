@@ -20,9 +20,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
 
-/* =========================================
+/* =====================================================
    FIREBASE CONFIG
-========================================= */
+===================================================== */
 
 const firebaseConfig = {
   apiKey: "AIzaSyBfESDPYSGQKP6gMJ89f1dVQKEjO7MFZOA",
@@ -35,18 +35,18 @@ const firebaseConfig = {
 };
 
 
-/* =========================================
-   FIREBASE
-========================================= */
+/* =====================================================
+   INITIALIZE FIREBASE
+===================================================== */
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-/* =========================================
+/* =====================================================
    ACCOUNTS
-========================================= */
+===================================================== */
 
 const accounts = {
   aniket: "aniket@ourspace.local",
@@ -54,43 +54,65 @@ const accounts = {
 };
 
 
-/* =========================================
+/* =====================================================
    ELEMENTS
-========================================= */
+===================================================== */
 
-const loginScreen = document.getElementById("loginScreen");
-const chatScreen = document.getElementById("chatScreen");
+const loginScreen =
+  document.getElementById("loginScreen");
 
-const loginForm = document.getElementById("loginForm");
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
-const loginError = document.getElementById("loginError");
+const chatScreen =
+  document.getElementById("chatScreen");
 
-const messageForm = document.getElementById("messageForm");
-const messageInput = document.getElementById("messageInput");
+const loginForm =
+  document.getElementById("loginForm");
 
-const messages = document.getElementById("messages");
-const emptyState = document.getElementById("emptyState");
+const usernameInput =
+  document.getElementById("username");
 
-const logoutBtn = document.getElementById("logoutBtn");
-const statusText = document.getElementById("status");
+const passwordInput =
+  document.getElementById("password");
+
+const loginError =
+  document.getElementById("loginError");
+
+const messageForm =
+  document.getElementById("messageForm");
+
+const messageInput =
+  document.getElementById("messageInput");
+
+const messages =
+  document.getElementById("messages");
+
+const emptyState =
+  document.getElementById("emptyState");
+
+const logoutBtn =
+  document.getElementById("logoutBtn");
+
+const statusText =
+  document.getElementById("status");
 
 
-/* =========================================
-   VARIABLES
-========================================= */
+/* =====================================================
+   STATE
+===================================================== */
 
 let currentUser = null;
 let currentUsername = null;
 let partnerUid = null;
 
 let typingTimer = null;
-let chatStarted = false;
-let presenceListenerStarted = false;
 
-/* =========================================
+let presenceStarted = false;
+let chatStarted = false;
+let typingStarted = false;
+
+
+/* =====================================================
    LOGIN
-========================================= */
+===================================================== */
 
 loginForm.addEventListener("submit", async (event) => {
 
@@ -99,10 +121,13 @@ loginForm.addEventListener("submit", async (event) => {
   loginError.textContent = "";
 
   const username =
-    usernameInput.value.trim().toLowerCase();
+    usernameInput.value
+      .trim()
+      .toLowerCase();
 
   const password =
     passwordInput.value;
+
 
   if (!accounts[username]) {
 
@@ -111,6 +136,7 @@ loginForm.addEventListener("submit", async (event) => {
 
     return;
   }
+
 
   try {
 
@@ -135,194 +161,246 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 
-/* =========================================
+/* =====================================================
    AUTH STATE
-========================================= */
+===================================================== */
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
 
- if (!user) {
+  if (!user) {
 
-  currentUser = null;
-  currentUsername = null;
-  partnerUid = null;
-  presenceListenerStarted = false;
+    currentUser = null;
+    currentUsername = null;
+    partnerUid = null;
 
-  chatScreen.classList.add("hidden");
-  loginScreen.classList.remove("hidden");
+    presenceStarted = false;
+    chatStarted = false;
+    typingStarted = false;
 
-  return;
-}
+    chatScreen.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+
+    return;
+  }
+
+
   currentUser = user;
 
-  currentUsername =
-    user.email === accounts.aniket
-      ? "aniket"
-      : "pari";
 
-  partnerUid = null;
+  if (user.email === accounts.aniket) {
+
+    currentUsername = "aniket";
+
+  } else {
+
+    currentUsername = "pari";
+
+  }
+
 
   loginScreen.classList.add("hidden");
   chatScreen.classList.remove("hidden");
+
 
   if (!chatStarted) {
 
     chatStarted = true;
 
     startChat();
+
+  }
+
+
+  if (!presenceStarted) {
+
     startPresence();
-    findPartner();
+
+  }
+
+
+  if (!typingStarted) {
+
+    startTyping();
 
   }
 
 });
 
 
-/* =========================================
-   FIND PARTNER UID
-========================================= */
+/* =====================================================
+   REAL-TIME PRESENCE
+===================================================== */
 
 function startPresence() {
 
-  if (!currentUser || presenceListenerStarted) {
+  if (!currentUser || presenceStarted) {
     return;
   }
 
-  presenceListenerStarted = true;
+  presenceStarted = true;
 
-  const uid = currentUser.uid;
+
+  const uid =
+    currentUser.uid;
+
 
   const connectedRef =
     ref(db, ".info/connected");
+
 
   const myPresenceRef =
     ref(db, `presence/${uid}`);
 
-  onValue(connectedRef, async (snapshot) => {
 
-    const connected = snapshot.val() === true;
+  onValue(
+    connectedRef,
+    async (snapshot) => {
 
-    console.log("Firebase connected:", connected);
+      const connected =
+        snapshot.val() === true;
 
-    if (!connected) {
 
-      statusText.textContent = "Connecting...";
-
-      return;
-    }
-
-    try {
-
-      await onDisconnect(myPresenceRef).set({
-        username: currentUsername,
-        state: "offline",
-        lastSeen: Date.now()
-      });
-
-      await set(myPresenceRef, {
-        username: currentUsername,
-        state: "online",
-        lastSeen: Date.now()
-      });
-
-      console.log("Presence updated:", currentUsername);
-
-    } catch (error) {
-
-      console.error(
-        "PRESENCE ERROR:",
-        error
+      console.log(
+        "Firebase connected:",
+        connected
       );
 
-      statusText.textContent =
-        "Connection error";
+
+      if (!connected) {
+
+        statusText.textContent =
+          "Connecting...";
+
+        return;
+      }
+
+
+      try {
+
+        /*
+          If browser closes,
+          Firebase automatically changes
+          this user to offline.
+        */
+
+        await onDisconnect(
+          myPresenceRef
+        ).set({
+
+          username:
+            currentUsername,
+
+          state:
+            "offline",
+
+          lastSeen:
+            Date.now()
+
+        });
+
+
+        /*
+          Set ourselves online.
+        */
+
+        await set(
+          myPresenceRef,
+          {
+
+            username:
+              currentUsername,
+
+            state:
+              "online",
+
+            lastSeen:
+              Date.now()
+
+          }
+        );
+
+
+        console.log(
+          "Presence updated:",
+          currentUsername
+        );
+
+
+        watchPartnerPresence();
+
+
+      } catch (error) {
+
+        console.error(
+          "PRESENCE ERROR:",
+          error
+        );
+
+        statusText.textContent =
+          "Connection error";
+
+      }
 
     }
-
-  });
-
-  watchPartnerPresence();
+  );
 
 }
 
 
-/* =========================================
-   PRESENCE
-========================================= */
-
-function startPresence() {
-
-  const uid = currentUser.uid;
-
-  const connectedRef =
-    ref(db, ".info/connected");
-
-  const userStatusRef =
-    ref(db, `presence/${uid}`);
-
-  onValue(connectedRef, async (snapshot) => {
-
-    if (snapshot.val() !== true) {
-
-      return;
-    }
-
-    await onDisconnect(userStatusRef)
-      .set({
-        state: "offline",
-        lastSeen: Date.now()
-      });
-
-    await set(userStatusRef, {
-
-      state: "online",
-
-      lastSeen: Date.now()
-
-    });
-
-    watchPartnerPresence();
-
-  });
-
-}
-
-
-/* =========================================
-   WATCH PARTNER PRESENCE
-========================================= */
+/* =====================================================
+   WATCH PARTNER ONLINE STATUS
+===================================================== */
 
 function watchPartnerPresence() {
 
   const presenceRef =
     ref(db, "presence");
 
+
   onValue(
     presenceRef,
     (snapshot) => {
 
-      const data = snapshot.val();
+      const data =
+        snapshot.val();
+
 
       if (!data) {
 
         statusText.textContent =
           "Offline";
 
+        partnerUid = null;
+
         return;
       }
+
+
+      /*
+        We already know the two usernames.
+        So find the other person's presence.
+      */
 
       const partnerUsername =
         currentUsername === "aniket"
           ? "pari"
           : "aniket";
 
+
       const partnerEntry =
         Object.entries(data)
           .find(
-            ([uid, person]) =>
-              person &&
-              person.username === partnerUsername
+            ([uid, person]) => {
+
+              return (
+                person &&
+                person.username ===
+                  partnerUsername
+              );
+
+            }
           );
+
 
       if (!partnerEntry) {
 
@@ -334,10 +412,13 @@ function watchPartnerPresence() {
         return;
       }
 
+
       const [uid, partner] =
         partnerEntry;
 
+
       partnerUid = uid;
+
 
       if (partner.state === "online") {
 
@@ -347,7 +428,9 @@ function watchPartnerPresence() {
       } else {
 
         statusText.textContent =
-          formatLastSeen(partner.lastSeen);
+          formatLastSeen(
+            partner.lastSeen
+          );
 
       }
 
@@ -369,9 +452,10 @@ function watchPartnerPresence() {
 
 }
 
-/* =========================================
+
+/* =====================================================
    LAST SEEN
-========================================= */
+===================================================== */
 
 function formatLastSeen(timestamp) {
 
@@ -381,8 +465,10 @@ function formatLastSeen(timestamp) {
 
   }
 
+
   const date =
     new Date(timestamp);
+
 
   const time =
     date.toLocaleTimeString(
@@ -393,226 +479,390 @@ function formatLastSeen(timestamp) {
       }
     );
 
+
   return `Last seen ${time}`;
 
 }
 
 
-/* =========================================
+/* =====================================================
    SEND MESSAGE
-========================================= */
+===================================================== */
 
-messageForm.addEventListener("submit", async (event) => {
+messageForm.addEventListener(
+  "submit",
+  async (event) => {
 
-  event.preventDefault();
-
-  if (!currentUser) return;
-
-  const text =
-    messageInput.value.trim();
-
-  if (!text) return;
-
-  try {
-
-    const newMessageRef =
-      push(ref(db, "messages"));
-
-    await set(newMessageRef, {
-
-      text: text,
-
-      uid: currentUser.uid,
-
-      timestamp: Date.now(),
-
-      readBy: {
-        [currentUser.uid]: true
-      }
-
-    });
-
-    messageInput.value = "";
-
-    await set(
-      ref(db, `typing/${currentUser.uid}`),
-      false
-    );
-
-    messageInput.focus();
-
-  } catch (error) {
-
-    console.error(
-      "MESSAGE ERROR:",
-      error.code,
-      error.message
-    );
-
-    alert(
-      "Message send nahi hua.\n\n" +
-      error.code +
-      "\n" +
-      error.message
-    );
-
-  }
-
-});
+    event.preventDefault();
 
 
-/* =========================================
-   TYPING INDICATOR
-========================================= */
+    if (!currentUser) {
 
-messageInput.addEventListener("input", async () => {
-
-  if (!currentUser) return;
-
-  const typingRef =
-    ref(db, `typing/${currentUser.uid}`);
-
-  await set(typingRef, true);
-
-  clearTimeout(typingTimer);
-
-  typingTimer =
-    setTimeout(async () => {
-
-      await set(
-        typingRef,
-        false
+      alert(
+        "You are not logged in."
       );
 
-    }, 1200);
+      return;
+    }
 
-});
+
+    const text =
+      messageInput.value.trim();
 
 
-/* =========================================
-   WATCH PARTNER TYPING
-========================================= */
+    if (!text) {
 
-function watchTyping() {
-
-  const typingRef =
-    ref(db, "typing");
-
-  onValue(typingRef, (snapshot) => {
-
-    const data = snapshot.val();
-
-    if (!data || !partnerUid) return;
-
-    if (data[partnerUid] === true) {
-
-      statusText.textContent =
-        "typing...";
-
-    } else {
-
-      watchPartnerPresence();
+      return;
 
     }
 
-  });
+
+    try {
+
+      const messageRef =
+        push(
+          ref(db, "messages")
+        );
+
+
+      await set(
+        messageRef,
+        {
+
+          text:
+            text,
+
+          uid:
+            currentUser.uid,
+
+          timestamp:
+            Date.now(),
+
+          readBy: {
+
+            [currentUser.uid]:
+              true
+
+          }
+
+        }
+      );
+
+
+      messageInput.value = "";
+
+
+      /*
+        Stop typing after sending.
+      */
+
+      await set(
+        ref(
+          db,
+          `typing/${currentUser.uid}`
+        ),
+        false
+      );
+
+
+      clearTimeout(
+        typingTimer
+      );
+
+
+      messageInput.focus();
+
+
+    } catch (error) {
+
+      console.error(
+        "MESSAGE ERROR:",
+        error.code,
+        error.message
+      );
+
+
+      alert(
+        "Message send nahi hua.\n\n" +
+        error.code +
+        "\n" +
+        error.message
+      );
+
+    }
+
+  }
+);
+
+
+/* =====================================================
+   TYPING INDICATOR
+===================================================== */
+
+function startTyping() {
+
+  if (typingStarted) {
+    return;
+  }
+
+  typingStarted = true;
+
+
+  messageInput.addEventListener(
+    "input",
+    async () => {
+
+      if (!currentUser) {
+        return;
+      }
+
+
+      const typingRef =
+        ref(
+          db,
+          `typing/${currentUser.uid}`
+        );
+
+
+      try {
+
+        await set(
+          typingRef,
+          true
+        );
+
+
+        clearTimeout(
+          typingTimer
+        );
+
+
+        typingTimer =
+          setTimeout(
+            async () => {
+
+              await set(
+                typingRef,
+                false
+              );
+
+            },
+            1200
+          );
+
+
+      } catch (error) {
+
+        console.error(
+          "TYPING ERROR:",
+          error
+        );
+
+      }
+
+    }
+  );
+
+
+  watchPartnerTyping();
 
 }
 
 
-/* =========================================
-   LOAD CHAT
-========================================= */
+/* =====================================================
+   WATCH PARTNER TYPING
+===================================================== */
+
+function watchPartnerTyping() {
+
+  const typingRef =
+    ref(db, "typing");
+
+
+  onValue(
+    typingRef,
+    (snapshot) => {
+
+      const data =
+        snapshot.val();
+
+
+      if (!data || !partnerUid) {
+
+        return;
+
+      }
+
+
+      if (
+        data[partnerUid] === true
+      ) {
+
+        statusText.textContent =
+          "typing...";
+
+      } else {
+
+        /*
+          Typing stopped.
+          Re-check actual online status.
+        */
+
+        watchPartnerPresence();
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   LOAD REAL-TIME CHAT
+===================================================== */
 
 function startChat() {
 
   const messagesRef =
     ref(db, "messages");
 
-  onValue(messagesRef, async (snapshot) => {
 
-    messages.innerHTML = "";
+  onValue(
+    messagesRef,
+    async (snapshot) => {
 
-    const data =
-      snapshot.val();
+      messages.innerHTML = "";
 
-    if (!data) {
 
-      messages.appendChild(emptyState);
+      const data =
+        snapshot.val();
 
-      return;
-    }
 
-    const list =
-      Object.entries(data)
-        .map(([id, message]) => ({
-          id,
-          ...message
-        }))
-        .sort(
-          (a, b) =>
-            (a.timestamp || 0) -
-            (b.timestamp || 0)
+      if (!data) {
+
+        messages.appendChild(
+          emptyState
+        );
+
+        return;
+
+      }
+
+
+      const list =
+        Object.entries(data)
+          .map(
+            ([id, message]) => ({
+
+              id,
+
+              ...message
+
+            })
+          )
+          .sort(
+            (a, b) =>
+              (a.timestamp || 0) -
+              (b.timestamp || 0)
+          );
+
+
+      for (
+        const message
+        of list
+      ) {
+
+        renderMessage(
+          message
         );
 
 
-    for (const message of list) {
-
-      renderMessage(message);
-
-      /*
-        If this message belongs to the other person,
-        mark it as read.
-      */
-
-      if (
-        currentUser &&
-        message.uid !== currentUser.uid
-      ) {
+        /*
+          Mark messages from the
+          other person as read.
+        */
 
         if (
-          !message.readBy ||
-          !message.readBy[currentUser.uid]
+          currentUser &&
+          message.uid !==
+            currentUser.uid
         ) {
 
-          await update(
-            ref(
-              db,
-              `messages/${message.id}/readBy`
-            ),
-            {
-              [currentUser.uid]: true
+          const alreadyRead =
+            message.readBy &&
+            message.readBy[
+              currentUser.uid
+            ];
+
+
+          if (!alreadyRead) {
+
+            try {
+
+              await update(
+                ref(
+                  db,
+                  `messages/${message.id}/readBy`
+                ),
+                {
+
+                  [currentUser.uid]:
+                    true
+
+                }
+              );
+
+            } catch (error) {
+
+              console.error(
+                "READ RECEIPT ERROR:",
+                error
+              );
+
             }
-          );
+
+          }
 
         }
 
       }
 
+
+      messages.scrollTop =
+        messages.scrollHeight;
+
+    },
+
+    (error) => {
+
+      console.error(
+        "DATABASE READ ERROR:",
+        error
+      );
+
     }
 
-    messages.scrollTop =
-      messages.scrollHeight;
-
-  });
-
-  watchTyping();
+  );
 
 }
 
 
-/* =========================================
+/* =====================================================
    RENDER MESSAGE
-========================================= */
+===================================================== */
 
 function renderMessage(message) {
 
   const div =
     document.createElement("div");
 
+
   const mine =
     currentUser &&
-    message.uid === currentUser.uid;
+    message.uid ===
+      currentUser.uid;
+
 
   div.className =
     mine
@@ -623,12 +873,14 @@ function renderMessage(message) {
   const text =
     document.createElement("div");
 
+
   text.textContent =
     message.text;
 
 
   const meta =
     document.createElement("div");
+
 
   meta.className =
     "message-meta";
@@ -637,15 +889,24 @@ function renderMessage(message) {
   const time =
     document.createElement("span");
 
+
+  time.className =
+    "message-time";
+
+
   time.textContent =
-    formatTime(message.timestamp);
+    formatTime(
+      message.timestamp
+    );
 
 
-  meta.appendChild(time);
+  meta.appendChild(
+    time
+  );
 
 
   /*
-     Read receipt
+    Read receipt
   */
 
   if (mine) {
@@ -653,55 +914,78 @@ function renderMessage(message) {
     const tick =
       document.createElement("span");
 
+
     tick.className =
       "read-tick";
+
 
     const isRead =
       message.readBy &&
       partnerUid &&
-      message.readBy[partnerUid];
+      message.readBy[
+        partnerUid
+      ] === true;
+
 
     tick.textContent =
       isRead
         ? "✓✓"
         : "✓";
 
-    meta.appendChild(tick);
+
+    meta.appendChild(
+      tick
+    );
 
   }
 
 
-  div.appendChild(text);
-  div.appendChild(meta);
+  div.appendChild(
+    text
+  );
 
-  messages.appendChild(div);
+
+  div.appendChild(
+    meta
+  );
+
+
+  messages.appendChild(
+    div
+  );
 
 }
 
 
-/* =========================================
-   TIME
-========================================= */
+/* =====================================================
+   MESSAGE TIME
+===================================================== */
 
 function formatTime(timestamp) {
 
-  if (!timestamp) return "...";
+  if (!timestamp) {
 
-  return new Date(timestamp)
-    .toLocaleTimeString(
-      [],
-      {
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    );
+    return "...";
+
+  }
+
+
+  return new Date(
+    timestamp
+  ).toLocaleTimeString(
+    [],
+    {
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
 
 }
 
 
-/* =========================================
+/* =====================================================
    LOGOUT
-========================================= */
+===================================================== */
 
 logoutBtn.addEventListener(
   "click",
@@ -709,30 +993,56 @@ logoutBtn.addEventListener(
 
     if (currentUser) {
 
-      await set(
-        ref(
-          db,
-          `presence/${currentUser.uid}`
-        ),
-        {
-          state: "offline",
-          lastSeen: Date.now()
-        }
-      );
+      try {
 
-      await set(
-        ref(
-          db,
-          `typing/${currentUser.uid}`
-        ),
-        false
-      );
+        await set(
+          ref(
+            db,
+            `presence/${currentUser.uid}`
+          ),
+          {
+
+            username:
+              currentUsername,
+
+            state:
+              "offline",
+
+            lastSeen:
+              Date.now()
+
+          }
+        );
+
+
+        await set(
+          ref(
+            db,
+            `typing/${currentUser.uid}`
+          ),
+          false
+        );
+
+      } catch (error) {
+
+        console.error(
+          "LOGOUT PRESENCE ERROR:",
+          error
+        );
+
+      }
 
     }
 
-    chatStarted = false;
 
-    await signOut(auth);
+    clearTimeout(
+      typingTimer
+    );
+
+
+    await signOut(
+      auth
+    );
 
   }
 );
