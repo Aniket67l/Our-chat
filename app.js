@@ -1,0 +1,351 @@
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+
+import {
+  getDatabase,
+  ref,
+  push,
+  onValue,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+
+/* =========================================
+   FIREBASE CONFIG
+========================================= */
+
+const firebaseConfig = {
+
+  apiKey: "PASTE_YOUR_API_KEY",
+
+  authDomain:
+    "YOUR_PROJECT.firebaseapp.com",
+
+  databaseURL:
+    "https://YOUR_DATABASE.firebasedatabase.app",
+
+  projectId:
+    "YOUR_PROJECT_ID",
+
+  storageBucket:
+    "YOUR_PROJECT.firebasestorage.app",
+
+  messagingSenderId:
+    "YOUR_SENDER_ID",
+
+  appId:
+    "YOUR_APP_ID"
+};
+
+
+/* =========================================
+   INITIALIZE
+========================================= */
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const db = getDatabase(app);
+
+
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const loginScreen =
+  document.getElementById("loginScreen");
+
+const chatScreen =
+  document.getElementById("chatScreen");
+
+const loginForm =
+  document.getElementById("loginForm");
+
+const emailInput =
+  document.getElementById("email");
+
+const passwordInput =
+  document.getElementById("password");
+
+const loginError =
+  document.getElementById("loginError");
+
+const messageForm =
+  document.getElementById("messageForm");
+
+const messageInput =
+  document.getElementById("messageInput");
+
+const messages =
+  document.getElementById("messages");
+
+const emptyState =
+  document.getElementById("emptyState");
+
+const logoutBtn =
+  document.getElementById("logoutBtn");
+
+const statusText =
+  document.getElementById("status");
+
+
+/* =========================================
+   LOGIN
+========================================= */
+
+loginForm.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  loginError.textContent = "";
+
+  const email =
+    emailInput.value.trim();
+
+  const password =
+    passwordInput.value;
+
+  try {
+
+    await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+  } catch (error) {
+
+    console.error(error);
+
+    loginError.textContent =
+      "Login failed. Check your email and password.";
+
+  }
+
+});
+
+
+/* =========================================
+   AUTH STATE
+========================================= */
+
+onAuthStateChanged(auth, (user) => {
+
+  if (user) {
+
+    loginScreen.classList.add("hidden");
+
+    chatScreen.classList.remove("hidden");
+
+    statusText.textContent = "Online";
+
+    startChat();
+
+  } else {
+
+    chatScreen.classList.add("hidden");
+
+    loginScreen.classList.remove("hidden");
+
+    statusText.textContent = "Offline";
+
+  }
+
+});
+
+
+/* =========================================
+   SEND MESSAGE
+========================================= */
+
+messageForm.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  const user = auth.currentUser;
+
+  if (!user) return;
+
+  const text =
+    messageInput.value.trim();
+
+  if (!text) return;
+
+
+  const messagesRef =
+    ref(db, "messages");
+
+
+  try {
+
+    await push(messagesRef, {
+
+      text: text,
+
+      uid: user.uid,
+
+      email: user.email,
+
+      timestamp: serverTimestamp()
+
+    });
+
+    messageInput.value = "";
+
+    messageInput.focus();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Message send nahi hua.");
+
+  }
+
+});
+
+
+/* =========================================
+   LOAD REALTIME MESSAGES
+========================================= */
+
+function startChat() {
+
+  const messagesRef =
+    ref(db, "messages");
+
+
+  onValue(messagesRef, (snapshot) => {
+
+    messages.innerHTML = "";
+
+    const data =
+      snapshot.val();
+
+
+    if (!data) {
+
+      messages.appendChild(emptyState);
+
+      return;
+
+    }
+
+
+    const list =
+      Object.entries(data)
+        .map(([id, message]) => ({
+          id,
+          ...message
+        }))
+        .sort(
+          (a, b) =>
+            (a.timestamp || 0) -
+            (b.timestamp || 0)
+        );
+
+
+    list.forEach((message) => {
+
+      renderMessage(message);
+
+    });
+
+
+    messages.scrollTop =
+      messages.scrollHeight;
+
+  });
+
+}
+
+
+/* =========================================
+   RENDER MESSAGE
+========================================= */
+
+function renderMessage(message) {
+
+  const user =
+    auth.currentUser;
+
+
+  const div =
+    document.createElement("div");
+
+
+  const mine =
+    user && message.uid === user.uid;
+
+
+  div.className =
+    `message ${mine ? "mine" : "theirs"}`;
+
+
+  const text =
+    document.createElement("div");
+
+  /*
+     textContent is intentional.
+     It prevents messages from being
+     interpreted as HTML.
+  */
+
+  text.textContent =
+    message.text;
+
+
+  const time =
+    document.createElement("span");
+
+  time.className =
+    "message-time";
+
+  time.textContent =
+    formatTime(message.timestamp);
+
+
+  div.appendChild(text);
+
+  div.appendChild(time);
+
+  messages.appendChild(div);
+
+}
+
+
+/* =========================================
+   TIME
+========================================= */
+
+function formatTime(timestamp) {
+
+  if (!timestamp) return "...";
+
+  return new Date(timestamp)
+    .toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+}
+
+
+/* =========================================
+   LOGOUT
+========================================= */
+
+logoutBtn.addEventListener("click", async () => {
+
+  await signOut(auth);
+
+});
