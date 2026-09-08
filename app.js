@@ -23,26 +23,12 @@ import {
 ========================================= */
 
 const firebaseConfig = {
-
-  apiKey: "PASTE_YOUR_API_KEY",
-
-  authDomain:
-    "YOUR_PROJECT.firebaseapp.com",
-
-  databaseURL:
-    "https://YOUR_DATABASE.firebasedatabase.app",
-
-  projectId:
-    "YOUR_PROJECT_ID",
-
-  storageBucket:
-    "YOUR_PROJECT.firebasestorage.app",
-
-  messagingSenderId:
-    "YOUR_SENDER_ID",
-
-  appId:
-    "YOUR_APP_ID"
+  apiKey: "AIzaSyBfESDPYSGQKP6gMJ89f1dVQKEjO7MFZOA",
+  authDomain: "ourchat-85aa3.firebaseapp.com",
+  projectId: "ourchat-85aa3",
+  storageBucket: "ourchat-85aa3.firebasestorage.app",
+  messagingSenderId: "1099352092551",
+  appId: "1:1099352092551:web:e5fb057ea955b16fe9ed22"
 };
 
 
