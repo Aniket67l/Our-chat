@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Our Space 💜</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- LOGIN -->
+
+  <section id="loginScreen" class="screen">
+
+    <div class="login-card">
+
+      <div class="logo">♡</div>
+
+      <h1>Our Space</h1>
+
+      <p class="subtitle">A little place for us.</p>
+
+      <form id="loginForm">
+
+        <input
+          id="email"
+          type="email"
+          placeholder="Email"
+          required
+        >
+
+        <input
+          id="password"
+          type="password"
+          placeholder="Password"
+          required
+        >
+
+        <button type="submit">
+          Enter our space
+        </button>
+
+      </form>
+
+      <p id="loginError" class="error"></p>
+
+    </div>
+
+  </section>
+
+
+  <!-- CHAT -->
+
+  <section id="chatScreen" class="chat-screen hidden">
+
+    <header class="chat-header">
+
+      <div class="profile">
+
+        <div class="avatar">
+          ♡
+        </div>
+
+        <div>
+          <h2 id="partnerName">My Person</h2>
+
+          <span id="status">
+            Connecting...
+          </span>
+        </div>
+
+      </div>
+
+      <button id="logoutBtn" class="logout">
+        Logout
+      </button>
+
+    </header>
+
+
+    <main id="messages" class="messages">
+
+      <div class="empty-state" id="emptyState">
+        <div>💜</div>
+        <p>No messages yet.</p>
+        <span>Start the conversation.</span>
+      </div>
+
+    </main>
+
+
+    <form id="messageForm" class="message-form">
+
+      <input
+        id="messageInput"
+        type="text"
+        maxlength="1000"
+        autocomplete="off"
+        placeholder="Write a message..."
+        required
+      >
+
+      <button type="submit" aria-label="Send">
+        ➤
+      </button>
+
+    </form>
+
+  </section>
+
+
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>
