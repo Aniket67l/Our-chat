@@ -13,8 +13,7 @@ import {
   getDatabase,
   ref,
   push,
-  onValue,
-  serverTimestamp
+  onValue
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
 
@@ -229,34 +228,47 @@ messageForm.addEventListener("submit", async (event) => {
 
   event.preventDefault();
 
-  const user =
-    auth.currentUser;
+  const user = auth.currentUser;
 
-  if (!user) return;
+  if (!user) {
+    alert("You are not logged in.");
+    return;
+  }
 
-
-  const text =
-    messageInput.value.trim();
-
+  const text = messageInput.value.trim();
 
   if (!text) return;
 
-
   try {
 
-    await push(
-      ref(db, "messages"),
-      {
+    await push(ref(db, "messages"), {
 
-        text: text,
+      text: text,
 
-        uid: user.uid,
+      uid: user.uid,
 
-        timestamp:
-          serverTimestamp()
+      timestamp: Date.now()
 
-      }
+    });
+
+    messageInput.value = "";
+
+    messageInput.focus();
+
+  } catch (error) {
+
+    console.error("MESSAGE ERROR:", error);
+
+    alert(
+      "Message send nahi hua:\n" +
+      error.code +
+      "\n" +
+      error.message
     );
+
+  }
+
+});
 
 
     messageInput.value = "";
