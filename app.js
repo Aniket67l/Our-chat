@@ -51,8 +51,8 @@ const accounts = {
   aniket:
     "aniket@ourspace.local",
 
-  chulbul:
-    "chulbul@ourspace.local"
+  pari:
+    "pari@ourspace.local"
 
 };
 
