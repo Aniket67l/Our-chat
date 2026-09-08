@@ -86,7 +86,7 @@ let partnerUid = null;
 
 let typingTimer = null;
 let chatStarted = false;
-
+let presenceListenerStarted = false;
 
 /* =========================================
    LOGIN
@@ -141,17 +141,18 @@ loginForm.addEventListener("submit", async (event) => {
 
 onAuthStateChanged(auth, async (user) => {
 
-  if (!user) {
+ if (!user) {
 
-    currentUser = null;
-    currentUsername = null;
+  currentUser = null;
+  currentUsername = null;
+  partnerUid = null;
+  presenceListenerStarted = false;
 
-    chatScreen.classList.add("hidden");
-    loginScreen.classList.remove("hidden");
+  chatScreen.classList.add("hidden");
+  loginScreen.classList.remove("hidden");
 
-    return;
-  }
-
+  return;
+}
   currentUser = user;
 
   currentUsername =
@@ -181,30 +182,66 @@ onAuthStateChanged(auth, async (user) => {
    FIND PARTNER UID
 ========================================= */
 
-function findPartner() {
+function startPresence() {
 
-  const presenceRef =
-    ref(db, "presence");
+  if (!currentUser || presenceListenerStarted) {
+    return;
+  }
 
-  onValue(presenceRef, (snapshot) => {
+  presenceListenerStarted = true;
 
-    const data = snapshot.val();
+  const uid = currentUser.uid;
 
-    if (!data) return;
+  const connectedRef =
+    ref(db, ".info/connected");
 
-    const myUid = currentUser.uid;
+  const myPresenceRef =
+    ref(db, `presence/${uid}`);
 
-    const possiblePartner =
-      Object.keys(data)
-        .find(uid => uid !== myUid);
+  onValue(connectedRef, async (snapshot) => {
 
-    if (possiblePartner) {
+    const connected = snapshot.val() === true;
 
-      partnerUid = possiblePartner;
+    console.log("Firebase connected:", connected);
+
+    if (!connected) {
+
+      statusText.textContent = "Connecting...";
+
+      return;
+    }
+
+    try {
+
+      await onDisconnect(myPresenceRef).set({
+        username: currentUsername,
+        state: "offline",
+        lastSeen: Date.now()
+      });
+
+      await set(myPresenceRef, {
+        username: currentUsername,
+        state: "online",
+        lastSeen: Date.now()
+      });
+
+      console.log("Presence updated:", currentUsername);
+
+    } catch (error) {
+
+      console.error(
+        "PRESENCE ERROR:",
+        error
+      );
+
+      statusText.textContent =
+        "Connection error";
 
     }
 
   });
+
+  watchPartnerPresence();
 
 }
 
@@ -260,54 +297,77 @@ function watchPartnerPresence() {
   const presenceRef =
     ref(db, "presence");
 
-  onValue(presenceRef, (snapshot) => {
+  onValue(
+    presenceRef,
+    (snapshot) => {
 
-    const data = snapshot.val();
+      const data = snapshot.val();
 
-    if (!data) {
+      if (!data) {
+
+        statusText.textContent =
+          "Offline";
+
+        return;
+      }
+
+      const partnerUsername =
+        currentUsername === "aniket"
+          ? "pari"
+          : "aniket";
+
+      const partnerEntry =
+        Object.entries(data)
+          .find(
+            ([uid, person]) =>
+              person &&
+              person.username === partnerUsername
+          );
+
+      if (!partnerEntry) {
+
+        statusText.textContent =
+          "Offline";
+
+        partnerUid = null;
+
+        return;
+      }
+
+      const [uid, partner] =
+        partnerEntry;
+
+      partnerUid = uid;
+
+      if (partner.state === "online") {
+
+        statusText.textContent =
+          "Online";
+
+      } else {
+
+        statusText.textContent =
+          formatLastSeen(partner.lastSeen);
+
+      }
+
+    },
+
+    (error) => {
+
+      console.error(
+        "PRESENCE READ ERROR:",
+        error
+      );
 
       statusText.textContent =
-        "Offline";
+        "Connection error";
 
-      return;
     }
 
-    const myUid =
-      currentUser.uid;
-
-    const otherUid =
-      Object.keys(data)
-        .find(uid => uid !== myUid);
-
-    if (!otherUid) {
-
-      statusText.textContent =
-        "Offline";
-
-      return;
-    }
-
-    partnerUid = otherUid;
-
-    const partner =
-      data[otherUid];
-
-    if (partner.state === "online") {
-
-      statusText.textContent =
-        "Online";
-
-    } else {
-
-      statusText.textContent =
-        formatLastSeen(partner.lastSeen);
-
-    }
-
-  });
+  );
 
 }
-
 
 /* =========================================
    LAST SEEN
