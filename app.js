@@ -24,6 +24,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyBfESDPYSGQKP6gMJ89f1dVQKEjO7MFZOA",
   authDomain: "ourchat-85aa3.firebaseapp.com",
+  databaseURL: "https://ourchat-85aa3-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "ourchat-85aa3",
   storageBucket: "ourchat-85aa3.firebasestorage.app",
   messagingSenderId: "1099352092551",
